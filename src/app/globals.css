@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #f6f7f8;
+    color: #263642;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 1rem;
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Custom RSLpred 2.0 Tailwind components */
+.btn-primary-rslpred {
+  background-color: #234b6b;
+  color: #ffffff;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.625rem 1.25rem;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 6px 16px rgba(35, 75, 107, 0.16);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-primary-rslpred:hover {
+  background-color: #18384f;
+  box-shadow: 0 8px 20px rgba(35, 75, 107, 0.2);
+}
+
+.btn-secondary-rslpred {
+  background-color: #7c6744;
+  color: #ffffff;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.625rem 1.25rem;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(117, 98, 61, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-secondary-rslpred:hover {
+  background-color: #5f4f31;
+  box-shadow: 0 4px 8px rgba(117, 98, 61, 0.22);
+}
+
+.form-input-rslpred {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  padding: 0.625rem 0.875rem;
+  transition: all 0.2s ease-in-out;
+}
+.form-input-rslpred:focus {
+  outline: none;
+  border-color: #466b86;
+  box-shadow: 0 0 0 3px rgba(70, 107, 134, 0.14);
+  background-color: #ffffff;
+}
+
+.results-table-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-color: #466b86 #e7edf1;
+  scrollbar-width: auto;
+}
+.results-table-scroll::-webkit-scrollbar { height: 12px; }
+.results-table-scroll::-webkit-scrollbar-track { background: #e7edf1; }
+.results-table-scroll::-webkit-scrollbar-thumb { background: #466b86; border: 3px solid #e7edf1; border-radius: 999px; }
+
+.section-kicker {
+  color: #466b86;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.help-title {
+  margin-top: 0.75rem;
+  color: #1e2a33;
+  font-family: inherit;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+}
+
+.help-intro {
+  margin-top: 1rem;
+  max-width: 48rem;
+  color: #667581;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
