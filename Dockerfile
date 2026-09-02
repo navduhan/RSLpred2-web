@@ -10,7 +10,9 @@ RUN npm ci
 
 FROM base AS builder
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
-ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ARG NEXT_PUBLIC_BASE_PATH=/RSLpred2
+ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY \
+    NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
@@ -23,10 +25,10 @@ ENV NODE_ENV=production \
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates python3 tini \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates python3 tini \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd --system --gid 1001 nodejs \
-    && useradd --system --uid 1001 --gid nodejs nextjs \
+    && groupadd --gid 1001 nodejs \
+    && useradd --uid 1001 --gid nodejs --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin nextjs \
     && mkdir -p /app/data/jobs \
     && chown -R nextjs:nodejs /app/data
 

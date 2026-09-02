@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     if (!validModels.has(model)) return NextResponse.json({ error: 'Invalid model strategy.' }, { status: 400 });
     await verifyTurnstile(body.turnstileToken, ip);
 
-    const jobId = `rslpred2_${crypto.randomUUID()}`;
+    const jobId = `rslpred2_${crypto.randomUUID().replaceAll('-', '')}`;
     const jobToken = crypto.randomBytes(32).toString('base64url');
     const job = await createPredictionJob({ jobId, sequence, level, model, tokenHash: hashJobToken(jobToken), ownerHash: ownerHash(ip) });
     return NextResponse.json({ ...publicJob(job), jobToken }, { status: 202, headers: { 'Cache-Control': 'no-store' } });

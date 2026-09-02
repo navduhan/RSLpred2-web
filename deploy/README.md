@@ -1,6 +1,6 @@
 # RSLpred2 VM deployment
 
-This deployment runs the Next.js application behind an unprivileged Nginx gateway on VM loopback port 3215. Prediction inputs are transferred over pinned-key SSH/SFTP to the configured cluster, submitted with `sbatch --parsable --wait`, and the real result files are retrieved over SFTP.
+This deployment runs the Next.js application behind an unprivileged Nginx gateway on VM port 3215. Prediction inputs are transferred over pinned-key SSH/SFTP to the configured cluster, submitted with `sbatch --parsable --wait`, and the real result files are retrieved over SFTP.
 
 ## VM preparation
 
@@ -27,18 +27,45 @@ The configured SLURM script must accept `input.fasta level model output-director
 
 ## Start
 
+### Rootless Podman (recommended on RHEL-family VMs)
+
+Install the external Compose provider, then run the deployment as the unprivileged VM user without `sudo`:
+
+```bash
+sudo dnf install -y podman-compose
+podman info --format '{{.Host.Security.Rootless}}'
+podman compose --env-file deploy/docker.env \
+  -f deploy/compose.yaml \
+  -f deploy/compose.podman.yaml \
+  up -d --build
+```
+
+The rootless check must print `true`. The Podman overlay uses `keep-id` for the application process and private SELinux relabeling for its bind mounts. It also mounts the dedicated cluster key read-only; do not add `compose.ssh-key.yaml` to the Podman command.
+
+### Docker Engine
+
 ```bash
 docker compose --env-file deploy/docker.env -f deploy/compose.yaml -f deploy/compose.ssh-key.yaml up -d --build
 ```
 
-The gateway listens only on `127.0.0.1:3215` by default. Configure the VM's public HTTPS reverse proxy to forward the RSLpred2 domain to that address. Do not expose the internal application container.
+The gateway listens only on `127.0.0.1:3215` by default. When the HTTPS reverse proxy is on another host, set `PUBLIC_BIND_ADDRESS` to the VM's private interface and `TRUSTED_PROXY_CIDR` to the reverse proxy's exact source address with a `/32` prefix. Restrict TCP port 3215 at the VM firewall to that same source address. Never expose the internal application container.
+
+For a subpath deployment, set `NEXT_PUBLIC_BASE_PATH=/RSLpred2` before building and proxy the path without stripping it:
+
+```apache
+ProxyPreserveHost On
+ProxyAddHeaders On
+RequestHeader set X-Forwarded-Proto "https"
+ProxyPass        "/RSLpred2" "http://VM_PRIVATE_IP:3215/RSLpred2"
+ProxyPassReverse "/RSLpred2" "http://VM_PRIVATE_IP:3215/RSLpred2"
+```
 
 Check the deployment:
 
 ```bash
-docker compose --env-file deploy/docker.env -f deploy/compose.yaml -f deploy/compose.ssh-key.yaml ps
-docker compose --env-file deploy/docker.env -f deploy/compose.yaml -f deploy/compose.ssh-key.yaml logs -f app gateway
-curl --fail http://127.0.0.1:3215/
+podman compose --env-file deploy/docker.env -f deploy/compose.yaml -f deploy/compose.podman.yaml ps
+podman compose --env-file deploy/docker.env -f deploy/compose.yaml -f deploy/compose.podman.yaml logs -f app gateway
+curl --fail http://127.0.0.1:3215/RSLpred2
 ```
 
 Place `RSLpred-2.0.tar.gz` in `public/download/` only if the public package-download link should be enabled. The archive is mounted at runtime and is never stored in Git or baked into the image.

@@ -134,6 +134,8 @@ export function ownerHash(ip: string) {
 }
 
 export function bearerToken(req: NextRequest) {
+  const privateJobToken = req.headers.get('x-rslpred2-job-token')?.trim();
+  if (privateJobToken) return privateJobToken;
   const header = req.headers.get('authorization') || '';
   return header.startsWith('Bearer ') ? header.slice(7).trim() : '';
 }

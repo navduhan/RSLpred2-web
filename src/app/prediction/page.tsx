@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, CheckCircle2, ClipboardPaste, Database, ExternalLink, FileUp, Info, X, Loader2, Play, RefreshCw, Upload, Zap, Layers, Mail } from 'lucide-react';
 import TurnstileWidget from '@/components/TurnstileWidget';
+import { withBasePath } from '@/lib/base-path';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 
@@ -28,14 +29,24 @@ type PredictionJobResponse = {
   [key: string]: unknown;
 };
 
+async function readPredictionResponse(response: Response) {
+  const raw = await response.text();
+  try {
+    return JSON.parse(raw) as PredictionJobResponse;
+  } catch {
+    const status = `${response.status} ${response.statusText}`.trim();
+    throw new Error(`The prediction service returned an unexpected response (${status}). Please contact the server administrator.`);
+  }
+}
+
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 async function pollPredictionJob(jobId: string, jobToken: string, onUpdate: (message: string) => void, isCancelled: () => boolean) {
   while (!isCancelled()) {
-    const response = await fetch(`/api/predict?jobId=${encodeURIComponent(jobId)}`, {
-      cache: 'no-store', headers: { Authorization: `Bearer ${jobToken}` },
+    const response = await fetch(withBasePath(`/api/predict?jobId=${encodeURIComponent(jobId)}`), {
+      cache: 'no-store', headers: { 'X-RSLpred2-Job-Token': jobToken },
     });
-    const job = await response.json() as PredictionJobResponse;
+    const job = await readPredictionResponse(response);
     if (!response.ok) throw new Error(job.error || 'Unable to read prediction status.');
     onUpdate(job.message || `Job status: ${job.status}`);
     if (job.status === 'completed' || job.status === 'failed') return job;
@@ -86,7 +97,7 @@ export default function PredictionPage() {
     let activeJob: { jobId: string; jobToken: string };
     try {
       activeJob = JSON.parse(storedJob) as { jobId: string; jobToken: string };
-      if (!activeJob.jobId || !activeJob.jobToken) throw new Error('Invalid stored job.');
+      if (!activeJob.jobId || !activeJob.jobToken || activeJob.jobId.includes('-')) throw new Error('Invalid stored job.');
     } catch {
       localStorage.removeItem('rslpred2_active_job');
       return;
@@ -119,7 +130,7 @@ export default function PredictionPage() {
   const fetchAccessionsData = async (accString: string, db: 'ncbi' | 'uniprot') => {
     setFetchingAcc(true);
     try {
-      const res = await fetch('/api/accession', {
+      const res = await fetch(withBasePath('/api/accession'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accessions: accString, db }),
@@ -179,7 +190,7 @@ export default function PredictionPage() {
     if (!seqToRun.trim() && accession.trim()) {
       setFetchingAcc(true);
       try {
-        const res = await fetch('/api/accession', {
+        const res = await fetch(withBasePath('/api/accession'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ accessions: accession, db: accType }),
@@ -218,7 +229,7 @@ export default function PredictionPage() {
     setJobStatusText('Submitting the job…');
 
     try {
-      const res = await fetch('/api/predict', {
+      const res = await fetch(withBasePath('/api/predict'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -230,7 +241,7 @@ export default function PredictionPage() {
         }),
       });
 
-      const data = await res.json() as PredictionJobResponse;
+      const data = await readPredictionResponse(res);
       if (!res.ok) {
         throw new Error(data.error || 'Job submission failed');
       }
@@ -267,11 +278,11 @@ export default function PredictionPage() {
 
   return (
     <div className="container mx-auto max-w-7xl space-y-6 py-4">
-      <div className="relative overflow-hidden rounded-[1.75rem] border border-[#cddcd3] bg-[#f7f8f3] px-6 py-7 sm:px-9">
-        <div className="pointer-events-none absolute -right-16 -top-28 h-72 w-72 rounded-full border-[42px] border-[#dce9df]/60" />
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-[#DED5C2] bg-[#FBF8EF] px-6 py-7 sm:px-9">
+        <div className="pointer-events-none absolute -right-16 -top-28 h-72 w-72 rounded-full border-[42px] border-[#E9DFC8]/60" />
         <div className="relative">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#136d4b]">RSLpred-2.0 prediction server</p>
-          <h1 className="mt-2 font-serif text-3xl font-semibold tracking-tight text-[#082b3b] sm:text-4xl">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#2F5F78]">RSLpred-2.0 prediction server</p>
+          <h1 className="mt-2 font-serif text-3xl font-semibold tracking-tight text-[#172F42] sm:text-4xl">
             Configure a rice localization run
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
@@ -283,14 +294,14 @@ export default function PredictionPage() {
       <form onSubmit={(e) => e.preventDefault()}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Column: Input Options (7 cols) */}
-          <div className="space-y-6 rounded-[1.5rem] border border-[#d8e2db] bg-white p-5 shadow-[0_16px_45px_rgba(8,43,59,0.06)] sm:p-7 lg:col-span-7">
+          <div className="space-y-6 rounded-[1.5rem] border border-[#DDD5C4] bg-white p-5 shadow-[0_16px_45px_rgba(23,47,66,0.06)] sm:p-7 lg:col-span-7">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#136d4b]">Step 1</p>
-              <h2 className="mt-1 font-serif text-2xl font-semibold text-[#082b3b]">Provide protein input</h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2F5F78]">Step 1</p>
+              <h2 className="mt-1 font-serif text-2xl font-semibold text-[#172F42]">Provide protein input</h2>
               <p className="mt-2 text-sm leading-6 text-slate-500">Choose one input route. Your loaded sequence remains editable before submission.</p>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 rounded-2xl bg-[#f1f5f1] p-1.5" role="tablist" aria-label="Protein input method">
+            <div className="grid grid-cols-3 gap-2 rounded-2xl bg-[#F0F3F3] p-1.5" role="tablist" aria-label="Protein input method">
               {[
                 { id: 'accession' as const, label: 'Accessions', icon: Database },
                 { id: 'upload' as const, label: 'Upload', icon: FileUp },
@@ -305,7 +316,7 @@ export default function PredictionPage() {
                     role="tab"
                     aria-selected={selected}
                     onClick={() => setInputMode(tab.id)}
-                    className={`flex items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-xs font-bold transition ${selected ? 'bg-white text-[#136d4b] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                    className={`flex items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-xs font-bold transition ${selected ? 'bg-white text-[#2F5F78] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
                   >
                     <Icon className="h-4 w-4" />
                     <span className="hidden sm:inline">{tab.label}</span>
@@ -327,7 +338,7 @@ export default function PredictionPage() {
                         key={db}
                         type="button"
                         onClick={() => setAccType(db)}
-                        className={`rounded-md px-3 py-1.5 text-[11px] font-bold transition ${accType === db ? 'bg-[#136d4b] text-white shadow-sm' : 'text-slate-500'}`}
+                        className={`rounded-md px-3 py-1.5 text-[11px] font-bold transition ${accType === db ? 'bg-[#2F5F78] text-white shadow-sm' : 'text-slate-500'}`}
                       >
                         {db === 'ncbi' ? 'NCBI' : 'UniProt'}
                       </button>
@@ -342,13 +353,13 @@ export default function PredictionPage() {
                   placeholder="LOC_Os01g01010.1&#10;LOC_Os01g01020.1"
                   className="form-input-rslpred w-full resize-y p-3 font-mono text-xs leading-6"
                 />
-                <div className="flex flex-col gap-3 rounded-xl border border-[#dbe7df] bg-[#f7faf7] p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs leading-5 text-slate-600"><strong className="text-[#164735]">Run prediction</strong> will fetch these sequences automatically. Preview is optional.</p>
+                <div className="flex flex-col gap-3 rounded-xl border border-[#DDE7EA] bg-[#FCFAF4] p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs leading-5 text-slate-600"><strong className="text-[#274B5F]">Run prediction</strong> will fetch these sequences automatically. Preview is optional.</p>
                   <button
                     type="button"
                     onClick={handleFetchAccessions}
                     disabled={fetchingAcc}
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[#b8cec0] bg-white px-4 py-2 text-xs font-bold text-[#136d4b] transition hover:border-[#136d4b] disabled:opacity-50"
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[#BDD0D8] bg-white px-4 py-2 text-xs font-bold text-[#2F5F78] transition hover:border-[#2F5F78] disabled:opacity-50"
                   >
                     {fetchingAcc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
                     {fetchingAcc ? 'Fetching…' : 'Fetch & preview'}
@@ -363,9 +374,9 @@ export default function PredictionPage() {
                   <p className="text-sm font-bold text-slate-800">FASTA or accession-list file</p>
                   <p className="mt-1 text-xs text-slate-500">Accepted formats: .fasta, .fa, .txt, .csv, and .tsv.</p>
                 </div>
-                <div className="relative cursor-pointer rounded-2xl border-2 border-dashed border-[#bfd0c4] bg-[#f8faf8] p-8 text-center transition hover:border-[#136d4b] hover:bg-[#f3f8f4]">
+                <div className="relative cursor-pointer rounded-2xl border-2 border-dashed border-[#C9D5D8] bg-[#FCFAF4] p-8 text-center transition hover:border-[#2F5F78] hover:bg-[#F1F5F5]">
                   <input type="file" accept=".fasta,.fa,.txt,.csv,.tsv" onChange={handleFileUpload} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
-                  <Upload className="mx-auto h-7 w-7 text-[#136d4b]" />
+                  <Upload className="mx-auto h-7 w-7 text-[#2F5F78]" />
                   <p className="mt-3 text-sm font-bold text-slate-800">Choose a file or drop it here</p>
                   <p className="mt-1 text-xs text-slate-500">{fileName || 'FASTA sequences and accession lists are supported'}</p>
                 </div>
@@ -379,16 +390,16 @@ export default function PredictionPage() {
                     <label htmlFor="rsl-fasta" className="text-sm font-bold text-slate-800">FASTA sequence</label>
                     <p className="mt-1 text-xs text-slate-500">Up to 10,000 sequences; each header must begin with &gt;.</p>
                   </div>
-                  <button type="button" onClick={() => setTextareaSeq(DEMO_FASTA)} className="shrink-0 text-xs font-bold text-[#136d4b] hover:underline">Load demo</button>
+                  <button type="button" onClick={() => setTextareaSeq(DEMO_FASTA)} className="shrink-0 text-xs font-bold text-[#2F5F78] hover:underline">Load demo</button>
                 </div>
                 <textarea id="rsl-fasta" rows={10} value={textareaSeq} onChange={(e) => setTextareaSeq(e.target.value)} placeholder=">protein_id&#10;MALQVESTF..." className="form-input-rslpred w-full resize-y bg-slate-50 p-3 font-mono text-xs leading-6" />
               </div>
             )}
 
             {textareaSeq && inputMode !== 'paste' && (
-              <div className="overflow-hidden rounded-2xl border border-[#cfe2d6] bg-white">
-                <div className="flex items-center justify-between border-b border-[#dce9e1] bg-[#f3f8f4] px-4 py-3">
-                  <span className="flex items-center gap-2 text-xs font-bold text-[#136d4b]"><CheckCircle2 className="h-4 w-4" /> {sequenceCount} sequence{sequenceCount === 1 ? '' : 's'} ready</span>
+              <div className="overflow-hidden rounded-2xl border border-[#D9E4E7] bg-white">
+                <div className="flex items-center justify-between border-b border-[#DDE7EA] bg-[#F1F5F5] px-4 py-3">
+                  <span className="flex items-center gap-2 text-xs font-bold text-[#2F5F78]"><CheckCircle2 className="h-4 w-4" /> {sequenceCount} sequence{sequenceCount === 1 ? '' : 's'} ready</span>
                   <button type="button" onClick={() => setTextareaSeq('')} className="text-[11px] font-bold text-slate-500 hover:text-slate-800">Clear preview</button>
                 </div>
                 <textarea rows={7} value={textareaSeq} onChange={(e) => setTextareaSeq(e.target.value)} className="w-full resize-y border-0 bg-slate-950 p-4 font-mono text-xs leading-6 text-slate-100 outline-none" aria-label="Fetched FASTA preview" />
@@ -402,12 +413,12 @@ export default function PredictionPage() {
           </div>
 
           {/* Right Column: Prediction Options (5 cols) */}
-          <div className="flex flex-col justify-between space-y-6 self-start rounded-[1.5rem] border border-[#d8e2db] bg-white p-5 shadow-[0_16px_45px_rgba(8,43,59,0.06)] sm:p-7 lg:sticky lg:top-24 lg:col-span-5">
+          <div className="flex flex-col justify-between space-y-6 self-start rounded-[1.5rem] border border-[#DDD5C4] bg-white p-5 shadow-[0_16px_45px_rgba(23,47,66,0.06)] sm:p-7 lg:sticky lg:top-24 lg:col-span-5">
             <div className="space-y-6">
               <div className="flex items-start justify-between border-b border-slate-200 pb-4">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#a17111]">Step 2</p>
-                  <h2 className="mt-1 font-serif text-2xl font-semibold text-[#082b3b]">Prediction options</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#9A6513]">Step 2</p>
+                  <h2 className="mt-1 font-serif text-2xl font-semibold text-[#172F42]">Prediction options</h2>
                 </div>
               </div>
 
@@ -415,7 +426,7 @@ export default function PredictionPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm text-slate-800 flex items-center gap-1.5">
-                    <Layers className="w-4 h-4 text-[#4c3379]" />
+                    <Layers className="w-4 h-4 text-[#9B4F37]" />
                     <span>Select Level(s)</span>
                   </span>
                   <button
@@ -429,13 +440,13 @@ export default function PredictionPage() {
 
                 <div className="space-y-2.5">
                   <label className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center space-x-3 ${
-                    phase1radio ? 'border-[#136d4b] bg-[#136d4b]/5 shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
+                    phase1radio ? 'border-[#2F5F78] bg-[#2F5F78]/5 shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
                   }`}>
                     <input
                       type="checkbox"
                       checked={phase1radio}
                       onChange={(e) => setPhase1radio(e.target.checked)}
-                      className="w-4 h-4 text-[#136d4b] focus:ring-[#136d4b] rounded"
+                      className="w-4 h-4 text-[#2F5F78] focus:ring-[#2F5F78] rounded"
                     />
                     <div>
                       <div className="font-bold text-sm text-slate-900">Level I: Single vs Dual</div>
@@ -444,13 +455,13 @@ export default function PredictionPage() {
                   </label>
 
                   <label className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center space-x-3 ${
-                    phase2radio ? 'border-[#136d4b] bg-[#136d4b]/5 shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
+                    phase2radio ? 'border-[#2F5F78] bg-[#2F5F78]/5 shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
                   }`}>
                     <input
                       type="checkbox"
                       checked={phase2radio}
                       onChange={(e) => setPhase2radio(e.target.checked)}
-                      className="w-4 h-4 text-[#136d4b] focus:ring-[#136d4b] rounded"
+                      className="w-4 h-4 text-[#2F5F78] focus:ring-[#2F5F78] rounded"
                     />
                     <div>
                       <div className="font-bold text-sm text-slate-900">Level II: Single 10-Class</div>
@@ -459,13 +470,13 @@ export default function PredictionPage() {
                   </label>
 
                   <label className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center space-x-3 ${
-                    phase3radio ? 'border-[#136d4b] bg-[#136d4b]/5 shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
+                    phase3radio ? 'border-[#2F5F78] bg-[#2F5F78]/5 shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
                   }`}>
                     <input
                       type="checkbox"
                       checked={phase3radio}
                       onChange={(e) => setPhase3radio(e.target.checked)}
-                      className="w-4 h-4 text-[#136d4b] focus:ring-[#136d4b] rounded"
+                      className="w-4 h-4 text-[#2F5F78] focus:ring-[#2F5F78] rounded"
                     />
                     <div>
                       <div className="font-bold text-sm text-slate-900">Level III: Dual 6-Class</div>
@@ -474,13 +485,13 @@ export default function PredictionPage() {
                   </label>
 
                   <label className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center space-x-3 ${
-                    phase4radio ? 'border-[#136d4b] bg-[#136d4b]/5 shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
+                    phase4radio ? 'border-[#2F5F78] bg-[#2F5F78]/5 shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
                   }`}>
                     <input
                       type="checkbox"
                       checked={phase4radio}
                       onChange={(e) => setPhase4radio(e.target.checked)}
-                      className="w-4 h-4 text-[#136d4b] focus:ring-[#136d4b] rounded"
+                      className="w-4 h-4 text-[#2F5F78] focus:ring-[#2F5F78] rounded"
                     />
                     <div>
                       <div className="font-bold text-sm text-slate-900">Level IV: Membrane Topology</div>
@@ -510,7 +521,7 @@ export default function PredictionPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <label className={`p-3 rounded-xl border cursor-pointer transition-all flex flex-col justify-between space-y-1 ${
-                    predMethod === 'fast' ? 'border-[#136d4b] bg-[#136d4b]/10 shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
+                    predMethod === 'fast' ? 'border-[#2F5F78] bg-[#2F5F78]/10 shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
                   }`}>
                     <div className="flex items-center justify-between">
                       <span className="font-extrabold text-sm text-slate-900">Fast</span>
@@ -520,14 +531,14 @@ export default function PredictionPage() {
                         value="fast"
                         checked={predMethod === 'fast'}
                         onChange={() => setPredMethod('fast')}
-                        className="w-3.5 h-3.5 text-[#136d4b] focus:ring-[#136d4b]"
+                        className="w-3.5 h-3.5 text-[#2F5F78] focus:ring-[#2F5F78]"
                       />
                     </div>
                     <span className="text-[11px] text-slate-600">DPCP Feature Vector. Fast speed.</span>
                   </label>
 
                   <label className={`p-3 rounded-xl border cursor-pointer transition-all flex flex-col justify-between space-y-1 ${
-                    predMethod === 'sensitive' ? 'border-[#4c3379] bg-[#4c3379]/10 shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
+                    predMethod === 'sensitive' ? 'border-[#9B4F37] bg-[#9B4F37]/10 shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
                   }`}>
                     <div className="flex items-center justify-between">
                       <span className="font-extrabold text-sm text-slate-900">Sensitive</span>
@@ -537,7 +548,7 @@ export default function PredictionPage() {
                         value="sensitive"
                         checked={predMethod === 'sensitive'}
                         onChange={() => setPredMethod('sensitive')}
-                        className="w-3.5 h-3.5 text-[#4c3379] focus:ring-[#4c3379]"
+                        className="w-3.5 h-3.5 text-[#9B4F37] focus:ring-[#9B4F37]"
                       />
                     </div>
                     <span className="text-[11px] text-slate-600">TPC Feature Vector. Highest accuracy.</span>
@@ -550,8 +561,8 @@ export default function PredictionPage() {
             <div className="space-y-3 border-t border-slate-200 pt-6">
               <TurnstileWidget siteKey={TURNSTILE_SITE_KEY} onToken={setTurnstileToken} resetKey={turnstileResetKey} />
               {submitting && (
-                <div className="rounded-xl border border-[#bed7c7] bg-[#eef7f1] p-3" role="status" aria-live="polite">
-                  <div className="flex items-center gap-2 text-sm font-bold text-[#136d4b]"><Loader2 className="h-4 w-4 animate-spin" /> Prediction in progress</div>
+                <div className="rounded-xl border border-[#C4D8DE] bg-[#EEF4F5] p-3" role="status" aria-live="polite">
+                  <div className="flex items-center gap-2 text-sm font-bold text-[#2F5F78]"><Loader2 className="h-4 w-4 animate-spin" /> Prediction in progress</div>
                   <p className="mt-1 pl-6 text-[11px] leading-5 text-slate-600">{jobStatusText} You may keep this page open; status checks use short requests.</p>
                 </div>
               )}
@@ -569,7 +580,7 @@ export default function PredictionPage() {
                 type="button"
                 onClick={handleRunPrediction}
                 disabled={submitting}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#136d4b] px-5 py-3.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(19,109,75,0.22)] transition hover:-translate-y-0.5 hover:bg-[#0d583c] disabled:opacity-50"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#2F5F78] px-5 py-3.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(47,95,120,0.22)] transition hover:-translate-y-0.5 hover:bg-[#244B60] disabled:opacity-50"
               >
                 {submitting ? (
                   <>
@@ -589,18 +600,18 @@ export default function PredictionPage() {
         </div>
       </form>
 
-      <section className="rounded-2xl border border-[#d8e2db] bg-[#f7f8f5] p-5 sm:p-6" aria-labelledby="prediction-citation-title">
+      <section className="rounded-2xl border border-[#DDD5C4] bg-[#FBF8EF] p-5 sm:p-6" aria-labelledby="prediction-citation-title">
         <div className="grid gap-4 md:grid-cols-[190px_1fr] md:items-start">
           <div className="flex items-center gap-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#dfece4] text-[#136d4b]">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#E8F0F2] text-[#2F5F78]">
               <BookOpen className="h-4 w-4" />
             </span>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#136d4b]">Publication</p>
-              <h2 id="prediction-citation-title" className="mt-0.5 text-sm font-bold text-[#082b3b]">Please cite RSLpred2</h2>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#2F5F78]">Publication</p>
+              <h2 id="prediction-citation-title" className="mt-0.5 text-sm font-bold text-[#172F42]">Please cite RSLpred2</h2>
             </div>
           </div>
-          <div className="border-t border-[#d8e2db] pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0">
+          <div className="border-t border-[#DDD5C4] pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0">
             <cite className="block not-italic text-xs font-semibold leading-5 text-slate-700">
               Duhan, N., &amp; Kaundal, R. (2025). RSLpred2: An Integrated Web Server for the Annotation of Rice Proteome Subcellular Localization Using Deep Learning. <em>Rice, 18</em>, 58.
             </cite>
@@ -608,7 +619,7 @@ export default function PredictionPage() {
               href="https://doi.org/10.1186/s12284-025-00767-7"
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#136d4b] hover:underline"
+              className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#2F5F78] hover:underline"
             >
               DOI: 10.1186/s12284-025-00767-7 <ExternalLink className="h-3.5 w-3.5" />
             </a>

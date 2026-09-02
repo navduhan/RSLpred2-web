@@ -10,6 +10,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || "/RSLpred2",
   output: "standalone",
   poweredByHeader: false,
   images: { unoptimized: true },

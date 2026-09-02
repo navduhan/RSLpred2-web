@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { withBasePath } from '@/lib/base-path';
 
 export default function Footer() {
   return (
@@ -8,13 +9,13 @@ export default function Footer() {
 
         <div className="flex items-center space-x-6 flex-wrap justify-center">
           <a href="https://bioinfo.usu.edu" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
-            <Image src="/assets/images/lab_logo_red.png" alt="KAABiL Lab" width={133} height={40} className="h-10 w-auto object-contain" />
+            <Image src={withBasePath('/assets/images/lab_logo_red.png')} alt="KAABiL Lab" width={133} height={40} className="h-10 w-auto object-contain" />
           </a>
           <a href="https://usu.edu" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
-            <Image src="/assets/images/usulogo2.png" alt="Utah State University" width={129} height={40} className="h-10 w-auto object-contain" />
+            <Image src={withBasePath('/assets/images/usulogo2.png')} alt="Utah State University" width={129} height={40} className="h-10 w-auto object-contain" />
           </a>
           <a href="https://psc.usu.edu" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
-            <Image src="/assets/images/PSC_NoTower_Blue.png" alt="USU PSC Department" width={209} height={40} className="h-10 w-auto object-contain" />
+            <Image src={withBasePath('/assets/images/PSC_NoTower_Blue.png')} alt="USU PSC Department" width={209} height={40} className="h-10 w-auto object-contain" />
           </a>
         </div>
       </div>

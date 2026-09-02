@@ -15,12 +15,12 @@ export default function Navbar() {
   ];
 
   return (
-    <header className="bg-[#00263A] text-white shadow-md sticky top-0 z-50">
+    <header className="bg-[#172F42] text-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link
             href="/"
-            className="text-2xl font-extrabold italic tracking-tight text-white hover:text-[#1b9467] transition-colors"
+            className="text-2xl font-extrabold italic tracking-tight text-white hover:text-[#C6922E] transition-colors"
           >
             RSLpred 2.0
           </Link>
@@ -35,8 +35,8 @@ export default function Navbar() {
                   href={item.href}
                   className={`flex items-center gap-1.5 border-b-2 py-1 text-sm font-semibold transition-all sm:text-base ${
                     isActive
-                      ? 'text-[#1b9467] border-[#1b9467]'
-                      : 'text-white border-transparent hover:text-[#1b9467]'
+                      ? 'text-[#C6922E] border-[#C6922E]'
+                      : 'text-white border-transparent hover:text-[#C6922E]'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
