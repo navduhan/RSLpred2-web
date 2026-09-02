@@ -1,65 +1,157 @@
-import Image from "next/image";
+import Image from 'next/image';
+import Link from 'next/link';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  BookOpen,
+  Download,
+  Layers3,
+} from 'lucide-react';
+
+const hierarchy = [
+  { level: 'I', label: 'Single vs dual', detail: 'Primary routing' },
+  { level: 'II', label: '10 classes', detail: 'Single localization' },
+  { level: 'III', label: '6 pairs', detail: 'Dual localization' },
+  { level: 'IV', label: 'Membrane type', detail: 'Single- or multi-pass' },
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="space-y-10 pb-10 pt-4 sm:space-y-14 sm:pt-8">
+      <section className="relative overflow-hidden rounded-[2rem] border border-[#cddcd3] bg-[#f7f8f3] px-6 py-10 sm:px-10 sm:py-12 lg:px-14">
+        <div className="pointer-events-none absolute -right-24 -top-32 h-96 w-96 rounded-full border-[52px] border-[#dce9df]/60" />
+        <div className="pointer-events-none absolute bottom-0 right-[36%] h-24 w-24 translate-y-1/2 rounded-full bg-[#d6a83b]/15" />
+
+        <div className="relative grid gap-10 lg:grid-cols-[1.35fr_0.85fr] lg:items-end">
+          <div>
+            <p className="mb-5 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#136d4b]">
+              <span className="h-px w-8 bg-[#136d4b]" />
+              Rice proteome annotation
+            </p>
+            <h1 className="max-w-3xl font-serif text-4xl font-semibold leading-[1.05] tracking-[-0.035em] text-[#082b3b] sm:text-5xl lg:text-6xl">
+              Protein localization,
+              <span className="block italic text-[#136d4b]">resolved for rice.</span>
+            </h1>
+            <p className="mt-6 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+              RSLpred-2.0 uses a rice-specific convolutional neural network to predict where proteins act within the cell—from a single FASTA sequence to a four-level localization report.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/prediction"
+                className="inline-flex items-center gap-2 rounded-full bg-[#136d4b] px-6 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(19,109,75,0.22)] transition hover:-translate-y-0.5 hover:bg-[#0d583c]"
+              >
+                Run a prediction <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/download"
+                className="inline-flex items-center gap-2 rounded-full border border-[#b8cec0] bg-white/80 px-6 py-3 text-sm font-bold text-[#164735] transition hover:-translate-y-0.5 hover:border-[#136d4b]"
+              >
+                <Download className="h-4 w-4" /> Standalone package
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-white/80 bg-white/75 p-3 shadow-[0_20px_60px_rgba(8,43,59,0.08)] backdrop-blur">
+            <div className="flex items-center justify-between px-3 pb-3 pt-2">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#136d4b]">Prediction hierarchy</p>
+                <p className="mt-1 text-sm text-slate-500">One sequence, four decisions</p>
+              </div>
+              <Layers3 className="h-5 w-5 text-[#136d4b]" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {hierarchy.map((item) => (
+                <div key={item.level} className="rounded-2xl border border-[#dce6df] bg-[#fbfcf9] p-4">
+                  <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#a17111]">Level {item.level}</span>
+                  <p className="mt-2 text-sm font-extrabold text-[#082b3b]">{item.label}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{item.detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      <section aria-labelledby="workflow-title">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#136d4b]">From sequence to compartment</p>
+            <h2 id="workflow-title" className="mt-2 font-serif text-3xl font-semibold tracking-tight text-[#082b3b] sm:text-4xl">
+              The complete prediction workflow
+            </h2>
+          </div>
+          <p className="text-sm font-semibold text-slate-500">TPC · 8,000 features · CNN</p>
         </div>
-      </main>
+
+        <figure className="overflow-hidden rounded-[1.75rem] border border-[#d8e2db] bg-[#fbfbf7] p-2 shadow-[0_24px_70px_rgba(8,43,59,0.10)] sm:p-4">
+          <Image
+            src="/assets/images/rslpred2_workflow_acd.png"
+            alt="RSLpred-2.0 workflow from rice protein sequence and tripeptide composition through a convolutional neural network and four-level localization hierarchy"
+            width={1608}
+            height={978}
+            sizes="(min-width: 1280px) 1216px, calc(100vw - 32px)"
+            priority
+            className="h-auto w-full rounded-[1.15rem]"
+          />
+          <figcaption className="flex flex-col gap-1 px-3 pb-2 pt-4 text-xs leading-5 text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <span>RSLpred-2.0 four-level protein subcellular localization workflow.</span>
+            <span>Generic query rows illustrate the report format.</span>
+          </figcaption>
+        </figure>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <article className="rounded-[1.75rem] border border-slate-200 bg-white p-7 sm:p-9">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#136d4b]">Why species-specific?</p>
+          <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-[#082b3b]">Built around the rice proteome</h2>
+          <div className="mt-5 grid gap-5 text-[15px] leading-7 text-slate-600 sm:grid-cols-2">
+            <p>
+              <em className="font-semibold text-slate-800">Oryza sativa</em> is a central model for cereal biology. Knowing where its proteins localize helps researchers interpret trafficking, interactions, regulation, and organelle-specific function.
+            </p>
+            <p>
+              RSLpred-2.0 converts each sequence into an 8,000-dimensional tripeptide-composition vector and applies CNN models across four linked localization levels.
+            </p>
+          </div>
+        </article>
+
+        <aside className="flex flex-col justify-between rounded-[1.75rem] bg-[#082b3b] p-7 text-white sm:p-9">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8fd1af]">Ready to analyze?</p>
+            <h2 className="mt-3 font-serif text-3xl font-semibold">Start with a protein sequence.</h2>
+            <p className="mt-4 text-sm leading-6 text-slate-300">Paste FASTA, upload a file, or provide NCBI and UniProt accessions.</p>
+          </div>
+          <Link href="/prediction" className="mt-8 inline-flex items-center gap-2 text-sm font-bold text-[#a7e4c5] hover:text-white">
+            Open the prediction server <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </aside>
+      </section>
+
+      <section className="rounded-[1.75rem] border border-[#d8e2db] bg-[#f7f8f5] p-6 sm:p-8" aria-labelledby="citation-title">
+        <div className="grid gap-5 lg:grid-cols-[220px_1fr] lg:items-start">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-[#dfece4] text-[#136d4b]">
+              <BookOpen className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#136d4b]">Publication</p>
+              <h2 id="citation-title" className="mt-1 font-bold text-[#082b3b]">Please cite RSLpred2</h2>
+            </div>
+          </div>
+          <div className="border-t border-[#d8e2db] pt-5 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
+            <cite className="block not-italic text-sm font-semibold leading-6 text-slate-700">
+              Duhan, N., &amp; Kaundal, R. (2025). RSLpred2: An Integrated Web Server for the Annotation of Rice Proteome Subcellular Localization Using Deep Learning. <em>Rice, 18</em>, 58.
+            </cite>
+            <a
+              href="https://doi.org/10.1186/s12284-025-00767-7"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-[#136d4b] hover:underline"
+            >
+              DOI: 10.1186/s12284-025-00767-7 <ArrowUpRight className="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

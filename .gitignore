@@ -33,6 +33,23 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# runtime/private deployment data
+/public/download/
+/public/models/
+/data/jobs/
+/AGENTS.md
+/CLAUDE.md
+/deploy/docker.env
+/deploy/data/jobs/*
+!/deploy/data/jobs/.gitignore
+
+# retain only the production workflow and institutional marks
+/public/assets/images/*
+!/public/assets/images/rslpred2_workflow_acd.png
+!/public/assets/images/lab_logo_red.png
+!/public/assets/images/usulogo2.png
+!/public/assets/images/PSC_NoTower_Blue.png
+
 # vercel
 .vercel
 

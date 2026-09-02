@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RSLpred2 web application
 
-## Getting Started
+RSLpred2 is a Next.js web interface for predicting *Oryza sativa* protein subcellular localization. It supports FASTA input, accession-based sequence retrieval, selectable prediction levels, protected asynchronous jobs, and results export.
 
-First, run the development server:
+Prediction computation is not included in this repository. In production, the application sends validated inputs over pinned-key SSH/SFTP to a configured SLURM cluster and runs the configured batch script with `sbatch --wait`. It never fabricates prediction results.
+
+## Local interface development
 
 ```bash
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The interface is available at `http://localhost:3000`. Cluster-backed prediction endpoints require the environment described in `deploy/README.md`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm ci
+npm run build
+npm start
+```
 
-## Learn More
+The included Dockerfile creates a non-root Next.js standalone image. Prediction inputs, downloadable archives, SSH keys, and environment files are intentionally excluded from version control and the Docker build context.
 
-To learn more about Next.js, take a look at the following resources:
+## Publication
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Duhan, N., & Kaundal, R. (2025). RSLpred2: An Integrated Web Server for the Annotation of Rice Proteome Subcellular Localization Using Deep Learning. *Rice, 18*, 58. https://doi.org/10.1186/s12284-025-00767-7
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+No open-source license has been assigned yet. The source is publicly visible, but reuse rights remain reserved unless a license is added.

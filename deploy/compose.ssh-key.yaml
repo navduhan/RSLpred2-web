@@ -1,0 +1,9 @@
+services:
+  app:
+    environment:
+      BIOCLUSTER_SSH_KEY_PATH: /run/secrets/biocluster_key
+    volumes:
+      - type: bind
+        source: ${BIOCLUSTER_KEY_FILE:?set BIOCLUSTER_KEY_FILE}
+        target: /run/secrets/biocluster_key
+        read_only: true
