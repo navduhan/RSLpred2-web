@@ -12,6 +12,12 @@ type PredictionRun = { clusterJobId?: string; executionMode: 'slurm' | 'local'; 
 
 const shellQuote = (value: string) => `'${value.replace(/'/g, `'"'"'`)}'`;
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
+const RESULT_FILES = new Set([
+  'RSLpred2_single_vs_dual_localizations.txt',
+  'RSLpred2_single_class_localizations.txt',
+  'RSLpred2_dual_class_localizations.txt',
+  'RSLpred2_membrane_classification.txt',
+]);
 
 class ClusterExecutionError extends Error {
   constructor(message: string, readonly fallbackSafe: boolean) {
@@ -132,6 +138,10 @@ function sftpWrite(sftp: SFTPWrapper, remotePath: string, content: string) {
   return new Promise<void>((resolve, reject) => sftp.writeFile(remotePath, Buffer.from(content), (error) => error ? reject(error) : resolve()));
 }
 
+function sftpChmod(sftp: SFTPWrapper, remotePath: string, mode: number) {
+  return new Promise<void>((resolve, reject) => sftp.chmod(remotePath, mode, (error) => error ? reject(error) : resolve()));
+}
+
 function sftpRead(sftp: SFTPWrapper, remotePath: string) {
   return new Promise<string>((resolve, reject) => sftp.readFile(remotePath, (error, data) => error ? reject(error) : resolve(data.toString())));
 }
@@ -141,7 +151,7 @@ function sftpList(sftp: SFTPWrapper, remotePath: string) {
 }
 
 async function collectRemoteResults(sftp: SFTPWrapper, outputDir: string): Promise<PredictionResults> {
-  const files = (await sftpList(sftp, outputDir)).filter((file) => file.endsWith('.txt')).sort();
+  const files = (await sftpList(sftp, outputDir)).filter((file) => RESULT_FILES.has(file)).sort();
   if (!files.length) throw new Error('SLURM job completed without producing result files.');
   const results: PredictionResults = {};
   for (const file of files) results[file] = parseTsv(await sftpRead(sftp, `${outputDir}/${file}`));
@@ -155,12 +165,16 @@ async function runOnCluster(request: PredictionRequest): Promise<PredictionRun> 
     const remoteRoot = PREDICTION_CONFIG.cluster.remoteTmpDir.replace(/\/$/, '');
     const remoteInput = `${remoteRoot}/${request.jobId}.fasta`;
     const remoteOutput = `${remoteRoot}/${request.jobId}`;
-    await execRemote(client, `mkdir -p -- ${shellQuote(remoteOutput)}`);
+    await execRemote(client, `umask 077; mkdir -p -- ${shellQuote(remoteOutput)}; chmod 700 -- ${shellQuote(remoteOutput)}`);
     sftp = await openSftp(client);
     await sftpWrite(sftp, remoteInput, request.sequence.trim());
+    await sftpChmod(sftp, remoteInput, 0o600);
 
     const { clusterJobId } = await execSbatchAndWait(client, [
-      'sbatch --parsable --wait', shellQuote(PREDICTION_CONFIG.cluster.remoteScript), shellQuote(remoteInput),
+      'umask 077; sbatch --parsable --wait', `--chdir=${shellQuote(remoteOutput)}`,
+      `--output=${shellQuote(`${remoteOutput}/slurm-%j.out`)}`,
+      `--error=${shellQuote(`${remoteOutput}/slurm-%j.err`)}`,
+      shellQuote(PREDICTION_CONFIG.cluster.remoteScript), shellQuote(remoteInput),
       shellQuote(request.level), shellQuote(request.model), shellQuote(remoteOutput),
     ].join(' '));
     try {
