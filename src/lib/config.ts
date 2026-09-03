@@ -26,7 +26,7 @@ export const PREDICTION_CONFIG = {
   },
   timeoutMs: nonNegativeInteger(process.env.PREDICTION_TIMEOUT_MS, 0),
   jobDir: process.env.PREDICTION_JOB_DIR || path.join(os.tmpdir(), 'rslpred2-jobs'),
-  jobRetentionMs: positiveInteger(process.env.PREDICTION_JOB_RETENTION_MS, 86400000),
+  jobRetentionMs: positiveInteger(process.env.PREDICTION_JOB_RETENTION_MS, 2592000000),
   sshKeepaliveIntervalMs: positiveInteger(process.env.SSH_KEEPALIVE_INTERVAL_MS, 15000),
   sshKeepaliveCountMax: positiveInteger(process.env.SSH_KEEPALIVE_COUNT_MAX, 4),
   maxActiveJobs: positiveInteger(process.env.PREDICTION_MAX_ACTIVE_JOBS, 4),

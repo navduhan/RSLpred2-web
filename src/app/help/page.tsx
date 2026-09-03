@@ -94,8 +94,8 @@ export default function HelpPage() {
           </section>
 
           <section id="results" className="scroll-mt-24 rounded-[1.5rem] border border-slate-200 bg-white p-6 sm:p-8">
-            <div className="flex items-start gap-4"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#E8F0F2] text-[#526B7A]"><Table2 className="h-4 w-4" /></span><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#526B7A]">05 · Read results</p><h2 className="mt-1 font-serif text-2xl font-semibold text-[#172F42]">Navigate by level</h2></div></div>
-            <p className="mt-5 text-sm leading-6 text-slate-600">Results are organized from Level I through Level IV above a full-width table. Choose a level to update the table, scroll horizontally when more columns are present, download the active level, or export all available levels in one file.</p>
+            <div className="flex items-start gap-4"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#E8F0F2] text-[#526B7A]"><Table2 className="h-4 w-4" /></span><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#526B7A]">05 · Read results</p><h2 className="mt-1 font-serif text-2xl font-semibold text-[#172F42]">Save and navigate results</h2></div></div>
+            <p className="mt-5 text-sm leading-6 text-slate-600">Copy the private results link when the job is submitted; it can reopen and monitor the job, and remains valid for 30 days. Completed outputs are organized from Level I through Level IV above a full-width, horizontally scrollable table. Download one level or export all available levels together.</p>
           </section>
 
           <section id="compatibility" className="scroll-mt-24 rounded-[1.5rem] border border-slate-200 bg-white p-6 sm:p-8">

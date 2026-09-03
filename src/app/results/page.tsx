@@ -2,16 +2,32 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowLeftRight, CheckCircle2, Download, Files, FlaskConical, Layers3, Table2 } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, Bookmark, Check, CheckCircle2, Copy, Download, Files, FlaskConical, Layers3, Loader2, Table2 } from 'lucide-react';
+import { withBasePath } from '@/lib/base-path';
+import { buildJobBookmark, expiresAt, readJobBookmark, type JobBookmark } from '@/lib/job-bookmark';
 
 type ResultValue = string | number | boolean | null;
 type ResultRow = Record<string, ResultValue>;
 type StoredResults = {
+  jobId?: string;
+  status?: 'queued' | 'running' | 'completed' | 'failed';
+  message?: string;
+  error?: string;
+  createdAt?: string;
+  updatedAt?: string;
   results?: Record<string, ResultRow[]>;
-  executionMode?: 'slurm' | 'local';
-  clusterJobId?: string;
-  remoteError?: string;
 };
+
+async function fetchJob(job: JobBookmark) {
+  const response = await fetch(withBasePath(`/api/predict?jobId=${encodeURIComponent(job.jobId)}`), { cache: 'no-store', headers: { 'X-RSLpred2-Job-Token': job.jobToken } });
+  const raw = await response.text();
+  let result: StoredResults;
+  try { result = JSON.parse(raw) as StoredResults; } catch { throw new Error(`The prediction service returned ${response.status} ${response.statusText}.`); }
+  if (!response.ok) throw new Error(result.error || 'This saved result could not be found.');
+  return result;
+}
+
+const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 const levelMeta = (fileName: string) => {
   if (fileName.includes('single_vs_dual')) return { level: 'Level I', title: 'Single vs dual localization', note: 'Primary localization mode' };
@@ -51,27 +67,54 @@ export default function ResultsPage() {
   const [data, setData] = useState<StoredResults | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [activeLevel, setActiveLevel] = useState('');
+  const [loadMessage, setLoadMessage] = useState('Opening your saved analysis…');
+  const [loadError, setLoadError] = useState('');
+  const [bookmark, setBookmark] = useState<JobBookmark | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const timer = window.setTimeout(() => {
-      const saved = localStorage.getItem('rslpred2_last_results');
-      if (saved) {
-        try {
+      const savedJob = readJobBookmark();
+      if (!savedJob) {
+        const saved = localStorage.getItem('rslpred2_last_results');
+        if (saved) try {
           const parsed = JSON.parse(saved) as StoredResults;
           setData(parsed);
           setActiveLevel(sortByLevel(Object.keys(parsed.results || {}))[0] || '');
-        } catch (error: unknown) {
-          console.error('Unable to read stored RSLpred2 results.', error);
-        }
+        } catch (error: unknown) { console.error('Unable to read stored RSLpred2 results.', error); }
+        setLoaded(true);
+        return;
       }
-      setLoaded(true);
+      setBookmark(savedJob);
+      void (async () => {
+        try {
+          let result = await fetchJob(savedJob);
+          while (!cancelled && (result.status === 'queued' || result.status === 'running')) {
+            setLoadMessage(result.message || 'Prediction is still running…');
+            await wait(3000);
+            result = await fetchJob(savedJob);
+          }
+          if (cancelled) return;
+          if (result.status === 'failed') throw new Error(result.error || 'Prediction failed.');
+          localStorage.setItem('rslpred2_last_results', JSON.stringify(result));
+          setData(result);
+          setActiveLevel(sortByLevel(Object.keys(result.results || {}))[0] || '');
+        } catch (error: unknown) {
+          if (!cancelled) setLoadError(error instanceof Error ? error.message : 'Unable to open the saved result.');
+        } finally {
+          if (!cancelled) setLoaded(true);
+        }
+      })();
     }, 0);
-    return () => window.clearTimeout(timer);
+    return () => { cancelled = true; window.clearTimeout(timer); };
   }, []);
 
   const resultFiles = useMemo(() => sortByLevel(Object.keys(data?.results || {})), [data]);
   const activeRows = data?.results?.[activeLevel] || [];
   const totalRows = useMemo(() => Math.max(0, ...resultFiles.map((file) => data?.results?.[file]?.length || 0)), [data, resultFiles]);
+  const resultBookmarkUrl = bookmark ? buildJobBookmark(bookmark) : '';
+  const expiryDate = data?.updatedAt ? expiresAt(data.updatedAt) : null;
 
   const downloadActive = () => {
     if (activeRows.length) saveTextFile(rowsToTsv(activeRows), activeLevel || 'RSLpred2_results.txt');
@@ -85,7 +128,7 @@ export default function ResultsPage() {
   };
 
   if (!loaded) {
-    return <div className="container mx-auto min-h-[480px] max-w-7xl py-8" aria-live="polite" />;
+    return <div className="container mx-auto max-w-3xl py-16" aria-live="polite"><div className="rounded-[2rem] border border-[#DED5C2] bg-[#FBF8EF] px-6 py-16 text-center"><Loader2 className="mx-auto h-7 w-7 animate-spin text-[#2F5F78]" /><h1 className="mt-5 font-serif text-2xl font-semibold text-[#172F42]">Loading prediction results</h1><p className="mt-2 text-sm text-slate-600">{loadMessage}</p></div></div>;
   }
 
   if (!data || resultFiles.length === 0) {
@@ -96,7 +139,7 @@ export default function ResultsPage() {
           <span className="relative mx-auto grid h-14 w-14 place-items-center rounded-full bg-white text-[#2F5F78] shadow-sm"><FlaskConical className="h-6 w-6" /></span>
           <p className="relative mt-6 text-[11px] font-black uppercase tracking-[0.2em] text-[#2F5F78]">Results workspace</p>
           <h1 className="relative mt-2 font-serif text-4xl font-semibold text-[#172F42]">No prediction results yet</h1>
-          <p className="relative mx-auto mt-4 max-w-xl text-sm leading-6 text-slate-600">Submit rice protein sequences on the Prediction page. Completed results will open here automatically and remain available in this browser.</p>
+          <p className="relative mx-auto mt-4 max-w-xl text-sm leading-6 text-slate-600">{loadError || 'Submit rice protein sequences on the Prediction page. Completed results remain available through their private link for 30 days.'}</p>
           <Link href="/prediction" className="relative mt-7 inline-flex items-center gap-2 rounded-full bg-[#2F5F78] px-6 py-3 text-sm font-bold text-white shadow-[0_10px_25px_rgba(47,95,120,0.2)]"><FlaskConical className="h-4 w-4" /> Start a prediction</Link>
         </section>
       </div>
@@ -125,10 +168,10 @@ export default function ResultsPage() {
       <section className="grid gap-3 sm:grid-cols-3" aria-label="Run summary">
         <div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Sequences</p><p className="mt-2 font-serif text-3xl font-semibold text-[#172F42]">{totalRows}</p><p className="mt-1 text-xs text-slate-500">Protein records analyzed</p></div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Outputs</p><p className="mt-2 font-serif text-3xl font-semibold text-[#172F42]">{resultFiles.length}</p><p className="mt-1 text-xs text-slate-500">Prediction levels available</p></div>
-        <div className={`rounded-2xl border p-5 ${data.executionMode === 'slurm' ? 'border-[#D9E4E7] bg-[#EEF4F5]' : 'border-amber-200 bg-amber-50'}`}><p className={`text-[10px] font-black uppercase tracking-[0.16em] ${data.executionMode === 'slurm' ? 'text-[#2F5F78]' : 'text-amber-700'}`}>Executor</p><p className={`mt-2 font-serif text-3xl font-semibold ${data.executionMode === 'slurm' ? 'text-[#2F5F78]' : 'text-amber-800'}`}>{data.executionMode === 'slurm' ? 'SLURM' : data.executionMode === 'local' ? 'Local fallback' : 'Unverified'}</p><p className="mt-1 text-xs text-slate-600">{data.clusterJobId ? `Cluster job ${data.clusterJobId}` : data.executionMode ? 'Real model output' : 'Legacy stored result'}</p></div>
+        <div className="min-w-0 rounded-2xl border border-[#D9E4E7] bg-[#EEF4F5] p-5"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2F5F78]">Results ID</p><p className="mt-2 truncate font-mono text-sm font-bold text-[#172F42]" title={data.jobId}>{data.jobId || 'Browser result'}</p><p className="mt-2 text-xs text-slate-600">{expiryDate ? `Available until ${expiryDate.toLocaleDateString()}` : 'Save the private URL below'}</p></div>
       </section>
 
-      {data.executionMode === 'local' && data.remoteError && <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900"><strong>Cluster fallback used.</strong> SLURM was unavailable for this run: {data.remoteError}</div>}
+      {bookmark && <section className="rounded-2xl border border-[#D9E4E7] bg-[#F7FAFA] p-4 sm:flex sm:items-center sm:gap-4" aria-label="Saved results link"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[#2F5F78]"><Bookmark className="h-4 w-4" /></span><div className="mt-3 min-w-0 flex-1 sm:mt-0"><p className="text-xs font-bold text-[#172F42]">Bookmark this private results link</p><p className="mt-1 truncate font-mono text-[10px] text-slate-500" title={resultBookmarkUrl}>{resultBookmarkUrl}</p><p className="mt-1 text-[10px] text-slate-500">Anyone with this link can view the result until it expires. Do not share it publicly.</p></div><button type="button" onClick={() => void navigator.clipboard.writeText(resultBookmarkUrl).then(() => { setLinkCopied(true); window.setTimeout(() => setLinkCopied(false), 1800); })} className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#172F42] px-4 py-2.5 text-xs font-bold text-white sm:mt-0">{linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{linkCopied ? 'Copied' : 'Copy link'}</button></section>}
 
       <div className="space-y-4">
         <nav className="rounded-[1.5rem] border border-slate-200 bg-[#FBF8EF] p-3" aria-label="Prediction levels">

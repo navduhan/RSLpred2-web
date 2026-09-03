@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { BookOpen, CheckCircle2, ClipboardPaste, Database, ExternalLink, FileUp, Info, X, Loader2, Play, RefreshCw, Upload, Zap, Layers, Mail } from 'lucide-react';
+import { Bookmark, BookOpen, Check, CheckCircle2, ClipboardPaste, Copy, Database, ExternalLink, FileUp, Info, X, Loader2, Play, RefreshCw, Upload, Zap, Layers, Mail } from 'lucide-react';
 import TurnstileWidget from '@/components/TurnstileWidget';
 import { withBasePath } from '@/lib/base-path';
+import { buildJobBookmark } from '@/lib/job-bookmark';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 
@@ -56,9 +56,7 @@ async function pollPredictionJob(jobId: string, jobToken: string, onUpdate: (mes
 }
 
 export default function PredictionPage() {
-  const router = useRouter();
-
-  const [inputMode, setInputMode] = useState<'accession' | 'upload' | 'paste'>('accession');
+  const [inputMode, setInputMode] = useState<'accession' | 'upload' | 'paste'>('paste');
 
   // Accession Tab & Input
   const [accType, setAccType] = useState<'ncbi' | 'uniprot'>('ncbi');
@@ -89,6 +87,8 @@ export default function PredictionPage() {
   const [fetchingAcc, setFetchingAcc] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const [jobReceipt, setJobReceipt] = useState<{ jobId: string; url: string } | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const sequenceCount = (textareaSeq.match(/^>/gm) || []).length;
 
   useEffect(() => {
@@ -106,13 +106,15 @@ export default function PredictionPage() {
     const timer = window.setTimeout(() => {
       setSubmitting(true);
       setJobStatusText('Resuming job monitoring…');
+      const bookmarkUrl = buildJobBookmark(activeJob);
+      setJobReceipt({ jobId: activeJob.jobId, url: bookmarkUrl });
       void pollPredictionJob(activeJob.jobId, activeJob.jobToken, setJobStatusText, () => cancelled)
         .then((job) => {
           if (!job || cancelled) return;
           localStorage.removeItem('rslpred2_active_job');
           if (job.status === 'failed') throw new Error(job.error || 'Prediction failed.');
           localStorage.setItem('rslpred2_last_results', JSON.stringify(job));
-          router.push('/results');
+          window.location.assign(bookmarkUrl);
         })
         .catch((error: unknown) => {
           if (!cancelled) {
@@ -125,7 +127,7 @@ export default function PredictionPage() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [router]);
+  }, []);
 
   const fetchAccessionsData = async (accString: string, db: 'ncbi' | 'uniprot') => {
     setFetchingAcc(true);
@@ -153,6 +155,13 @@ export default function PredictionPage() {
       return;
     }
     await fetchAccessionsData(accession, accType);
+  };
+
+  const loadDemoAccession = () => {
+    setInputMode('accession');
+    setAccType('uniprot');
+    setAccession('Q01883');
+    setTextareaSeq('');
   };
 
   // Upload handler supporting BOTH FASTA files and Accession List files (.txt, .csv, .tsv, .fasta)
@@ -246,14 +255,17 @@ export default function PredictionPage() {
         throw new Error(data.error || 'Job submission failed');
       }
       if (!data.jobToken) throw new Error('The server did not return a private job token.');
-      localStorage.setItem('rslpred2_active_job', JSON.stringify({ jobId: data.jobId, jobToken: data.jobToken }));
+      const activeJob = { jobId: data.jobId, jobToken: data.jobToken };
+      const bookmarkUrl = buildJobBookmark(activeJob);
+      localStorage.setItem('rslpred2_active_job', JSON.stringify(activeJob));
+      setJobReceipt({ jobId: data.jobId, url: bookmarkUrl });
       setJobStatusText(data.message || 'Job accepted. Waiting for SLURM…');
       const completedJob = await pollPredictionJob(data.jobId, data.jobToken, setJobStatusText, () => false);
       if (!completedJob) return;
       localStorage.removeItem('rslpred2_active_job');
       if (completedJob.status === 'failed') throw new Error(completedJob.error || 'Prediction failed.');
       localStorage.setItem('rslpred2_last_results', JSON.stringify(completedJob));
-      router.push('/results');
+      window.location.assign(bookmarkUrl);
     } catch (err: unknown) {
       setSubmitting(false);
       setTurnstileToken('');
@@ -263,7 +275,7 @@ export default function PredictionPage() {
   };
 
   const handleReset = () => {
-    setInputMode('accession');
+    setInputMode('paste');
     setAccession('');
     setTextareaSeq('');
     setEmailAddress('');
@@ -274,6 +286,8 @@ export default function PredictionPage() {
     setPhase4radio(false);
     setPredMethod('fast');
     setTurnstileToken('');
+    setJobReceipt(null);
+    setLinkCopied(false);
   };
 
   return (
@@ -303,9 +317,9 @@ export default function PredictionPage() {
 
             <div className="grid grid-cols-3 gap-2 rounded-2xl bg-[#F0F3F3] p-1.5" role="tablist" aria-label="Protein input method">
               {[
-                { id: 'accession' as const, label: 'Accessions', icon: Database },
-                { id: 'upload' as const, label: 'Upload', icon: FileUp },
                 { id: 'paste' as const, label: 'Paste FASTA', icon: ClipboardPaste },
+                { id: 'upload' as const, label: 'Upload FASTA', icon: FileUp },
+                { id: 'accession' as const, label: 'Accessions', icon: Database },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const selected = inputMode === tab.id;
@@ -332,7 +346,9 @@ export default function PredictionPage() {
                     <label htmlFor="rsl-accessions" className="text-sm font-bold text-slate-800">Accession IDs</label>
                     <p className="mt-1 text-xs text-slate-500">Separate multiple IDs with commas, spaces, or new lines.</p>
                   </div>
-                  <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+                  <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+                    <button type="button" onClick={loadDemoAccession} className="text-[11px] font-bold text-[#2F5F78] hover:underline">Load demo accession</button>
+                    <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
                     {(['ncbi', 'uniprot'] as const).map((db) => (
                       <button
                         key={db}
@@ -343,6 +359,7 @@ export default function PredictionPage() {
                         {db === 'ncbi' ? 'NCBI' : 'UniProt'}
                       </button>
                     ))}
+                    </div>
                   </div>
                 </div>
                 <textarea
@@ -564,6 +581,17 @@ export default function PredictionPage() {
                 <div className="rounded-xl border border-[#C4D8DE] bg-[#EEF4F5] p-3" role="status" aria-live="polite">
                   <div className="flex items-center gap-2 text-sm font-bold text-[#2F5F78]"><Loader2 className="h-4 w-4 animate-spin" /> Prediction in progress</div>
                   <p className="mt-1 pl-6 text-[11px] leading-5 text-slate-600">{jobStatusText} You may keep this page open; status checks use short requests.</p>
+                  {jobReceipt && (
+                    <div className="mt-3 rounded-lg border border-[#D4E0E3] bg-white p-3">
+                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#2F5F78]"><Bookmark className="h-3.5 w-3.5" /> Save your results link</div>
+                      <p className="mt-1 font-mono text-[11px] font-bold text-[#172F42]">{jobReceipt.jobId}</p>
+                      <div className="mt-2 flex gap-2">
+                        <input readOnly value={jobReceipt.url} aria-label="Bookmarkable results URL" className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 font-mono text-[10px] text-slate-600" />
+                        <button type="button" onClick={() => void navigator.clipboard.writeText(jobReceipt.url).then(() => { setLinkCopied(true); window.setTimeout(() => setLinkCopied(false), 1800); })} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#172F42] px-3 py-2 text-[11px] font-bold text-white">{linkCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}{linkCopied ? 'Copied' : 'Copy'}</button>
+                      </div>
+                      <p className="mt-2 text-[10px] leading-4 text-slate-500">Keep this private link. It remains available for 30 days.</p>
+                    </div>
+                  )}
                 </div>
               )}
               <div className="flex items-center gap-3">

@@ -20,9 +20,6 @@ const publicJob = (job: PredictionJobRecord) => ({
   message: job.message,
   createdAt: job.createdAt,
   updatedAt: job.updatedAt,
-  clusterJobId: job.clusterJobId,
-  executionMode: job.executionMode,
-  remoteError: job.remoteError,
   results: job.results,
   error: job.error,
 });
