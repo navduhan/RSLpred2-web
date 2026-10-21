@@ -4,6 +4,27 @@ RSLpred2 is a Next.js web interface for predicting *Oryza sativa* protein subcel
 
 Prediction computation is not included in this repository. In production, the application sends validated inputs over pinned-key SSH/SFTP to a configured SLURM cluster and runs the configured batch script with `sbatch --wait`. It never fabricates prediction results.
 
+## Runtime and packages
+
+Use Node.js 22 and npm to match the included Docker image. Install dependencies with `npm ci` so that npm uses the versions recorded in `package-lock.json`.
+
+The lockfile currently includes:
+
+| Package | Locked version |
+| --- | --- |
+| Next.js | 16.3.3 |
+| React | 19.2.4 |
+| TypeScript | 5.9.3 |
+| Tailwind CSS | 4.3.3 |
+| ssh2 | 1.17.0 |
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the local development server |
+| `npm run lint` | Run ESLint |
+| `npm run build` | Create the production build |
+| `npm start` | Serve the production build |
+
 ## Local interface development
 
 ```bash
@@ -22,6 +43,12 @@ npm start
 ```
 
 The included Dockerfile creates a non-root Next.js standalone image. Prediction inputs, downloadable archives, SSH keys, and environment files are intentionally excluded from version control and the Docker build context.
+
+## Downloadable prediction package
+
+The downloadable prediction package is separate from this web interface. To enable the package-download link, place `RSLpred-2.0.tar.gz` in `public/download/` on the deployment host. The archive is mounted at runtime and is excluded from Git and the Docker image.
+
+See the [deployment guide](deploy/README.md) for archive transfer, cluster configuration, and Docker or Podman setup.
 
 ## Publication
 
